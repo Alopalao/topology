@@ -6,7 +6,7 @@ name: Copy OpenAPI to GitHub Pages
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [ test_actions ]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -29,4 +29,6 @@ jobs:
           destination_repo: 'kytos-ng/kytos-ng.github.io'
           destination_folder: 'topology'
           destination_branch: 'master'
+          user_email: 'ajoaoff@gmail.com'
+          user_name: 'Antonio Francisco'
           commit_message: 'Pushing topology openapi.yml'
