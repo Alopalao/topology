@@ -24,11 +24,13 @@ jobs:
       # Runs a single command using the runners shell
       - name: Pushes openapi.yml
         uses: dmnemec/copy_file_to_another_repo_action@v1.1.1
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.MACHINE_ACCOUNT_API_TOKEN }}
         with:
           source_file: 'openapi.yml'
           destination_repo: 'kytos-ng/kytos-ng.github.io'
           destination_folder: 'topology'
           destination_branch: 'master'
-          user_email: 'ajoaoff@gmail.com'
-          user_name: 'Antonio Francisco'
+          user_email: 'github@rednesp.br'
+          user_name: 'Rednesp'
           commit_message: 'Pushing topology openapi.yml'
