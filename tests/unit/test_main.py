@@ -834,6 +834,16 @@ class TestMain(TestCase):
                             content_type='application/json')
         self.assertEqual(response.status_code, 415, response.data)
 
+    def test_add_interface_metadata_reserved(self):
+        """Test add_interface_metadata reserved."""
+        intf = "00:00:00:00:00:00:00:01:1"
+        api = get_test_client(self.napp.controller, self.napp)
+        payload = {"available_tags": [1, 2, 3]}
+
+        url = f'{self.server_name_url}/v3/interfaces/{intf}/metadata'
+        response = api.post(url, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400, response.data)
+
     def test_delete_interface_metadata(self):
         """Test delete_interface_metadata."""
         interface_id = '00:00:00:00:00:00:00:01:1'
@@ -874,6 +884,24 @@ class TestMain(TestCase):
         url = f'{self.server_name_url}{iface_url}{interface_id}/metadata/{key}'
         response = api.delete(url)
         self.assertEqual(response.status_code, 404, response.data)
+
+    def test_delete_interface_metadata_reserved(self):
+        """Test delete_interface_metadata reserved."""
+        intf = '00:00:00:00:00:00:00:01:1'
+        dpid = '00:00:00:00:00:00:00:01'
+        mock_switch = get_switch_mock(dpid)
+        mock_interface = get_interface_mock('s1-eth1', 1, mock_switch)
+        mock_interface.metadata = {"metadata": "A"}
+        mock_switch.interfaces = {1: mock_interface}
+
+        self.napp.store_items = {'interfaces': MagicMock()}
+        self.napp.controller.switches = {'00:00:00:00:00:00:00:01':
+                                         mock_switch}
+        api = get_test_client(self.napp.controller, self.napp)
+
+        url = f'{self.server_name_url}/v3/interfaces/{intf}/metadata/available_tags'
+        response = api.delete(url, content_type='application/json')
+        self.assertEqual(response.status_code, 400, response.data)
 
     @patch('napps.kytos.topology.main.Main.save_status_on_storehouse')
     def test_enable_link(self, mock_save_status):
