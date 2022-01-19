@@ -105,10 +105,21 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
             switches['switches'][switch.id] = switch_data
         return switches
 
-    def _get_links_dict(self):
+    def _get_links_dict(self, interface_excluded_metadata=["available_tags"]):
         """Return a dictionary with the known links."""
-        return {'links': {link.id: link.as_dict() for link in
-                          self.links.values()}}
+        links = {'links': {link.id: link.as_dict() for link in
+                           self.links.values()}}
+
+        """
+        later on we can parametrize the exclusions on `as_dict` methods
+        as more callers need to exclude metadata
+        """
+        for key in interface_excluded_metadata:
+            for link in links["links"].values():
+                for endpoint in ("endpoint_a", "endpoint_b"):
+                    if key in link[endpoint].get("metadata"):
+                        link[endpoint]["metadata"].pop(key)
+        return links
 
     def _get_topology_dict(self):
         """Return a dictionary with the known topology."""
