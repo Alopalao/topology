@@ -43,6 +43,7 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
 
         self._lock = Lock()
         self._links_lock = Lock()
+        self._reserved_intf_metadata = {"available_tags"}
 
     # pylint: disable=unused-argument,arguments-differ
     @listen_to('kytos/storehouse.loaded')
@@ -156,6 +157,13 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
         interface_b.nni = True
         self.update_instance_metadata(link)
 
+    def _load_intf_available_tags(self, interface):
+        """Load interface available tags from its metadata."""
+        available_tags = interface.metadata.get("available_tags", [])
+        if available_tags:
+            interface.set_available_tags(available_tags)
+        return available_tags
+
     def _load_switch(self, switch_id, switch_att):
         log.info(f'Loading switch from storehouse dpid={switch_id}')
         switch = self.controller.get_switch_or_create(switch_id)
@@ -183,6 +191,9 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
                 interface.disable()
             interface.lldp = iface_att['lldp']
             self.update_instance_metadata(interface)
+            if self._load_intf_available_tags(interface):
+                log.info(f"Loaded {len(interface.available_tags)} available tags"
+                         f" for {interface.id}")
             name = 'kytos/topology.port.created'
             event = KytosEvent(name=name, content={
                                               'switch': switch_id,
@@ -744,6 +755,27 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
 
     #    if settings.DISPLAY_FULL_DUPLEX_LINKS:
     #        self.topology.add_link(host.id, interface.id)
+
+    @listen_to("kytos/mef_eline.link_available_tags")
+    def on_link_available_tags(self, event):
+        """Handle on_link_available_tags."""
+        with self._links_lock:
+            self.handle_on_link_available_tags(event.content.get("link"))
+
+    def handle_on_link_available_tags(self, link):
+        """Handle on_link_available_tags."""
+        if link.id not in self.links:
+            return
+        endpoint_a = self.links[link.id].endpoint_a
+        endpoint_b = self.links[link.id].endpoint_b
+        tags_a = [tag.value for tag in endpoint_a.available_tags]
+        tags_b = [tag.value for tag in endpoint_b.available_tags]
+
+        endpoint_a.update_metadata("available_tags", tags_a)
+        endpoint_b.update_metadata("available_tags", tags_b)
+
+        self.save_metadata_on_store(endpoint_a, "interfaces")
+        self.save_metadata_on_store(endpoint_b, "interfaces")
 
     @listen_to('.*.network_status.updated')
     def on_network_status_updated(self, event):
