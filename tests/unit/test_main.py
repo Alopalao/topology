@@ -43,6 +43,7 @@ class TestMain(TestCase):
                            'kytos/maintenance.start_switch',
                            'kytos/maintenance.end_switch',
                            'kytos/storehouse.loaded',
+                           'kytos/mef_eline.link_available_tags',
                            '.*.network_status.updated',
                            '.*.interface.is.nni',
                            '.*.connection.lost',
@@ -326,11 +327,12 @@ class TestMain(TestCase):
         error = 'Error loading link 1: xpto'
         mock_log.error.assert_called_with(error)
 
+    @patch('napps.kytos.topology.main.Main._load_intf_available_tags')
     @patch('napps.kytos.topology.main.KytosEvent')
     @patch('kytos.core.buffers.KytosEventBuffer.put')
     def test_load_switch(self, *args):
         """Test _load_switch."""
-        (mock_buffers_put, mock_event) = args
+        (mock_buffers_put, mock_event, mock_load_tags) = args
         dpid_a = "00:00:00:00:00:00:00:01"
         dpid_x = "00:00:00:00:00:00:00:XX"
         iface_a = f'{dpid_a}:1'
@@ -350,6 +352,7 @@ class TestMain(TestCase):
             }
         }
         self.napp._load_switch(dpid_a, switch_attrs)
+        mock_load_tags.assert_called()
 
         self.assertEqual(len(self.napp.controller.switches), 1)
         self.assertIn(dpid_a, self.napp.controller.switches)
@@ -1389,3 +1392,14 @@ class TestMain(TestCase):
         event.content = content
         self.napp.handle_switch_maintenance_end(event)
         self.assertEqual(handle_link_up_mock.call_count, 5)
+
+    def test_load_intf_available_tags(self):
+        """Test load_intf_available_tags."""
+        intf = MagicMock()
+        intf.metadata = {}
+        assert not self.napp._load_intf_available_tags(intf)
+
+        available_tags = [10]
+        intf.metadata = {}
+        intf.metadata["available_tags"] = available_tags
+        assert self.napp._load_intf_available_tags(intf) == available_tags
