@@ -430,6 +430,11 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
             return jsonify("Switch not found"), 404
 
         try:
+            self.validate_interface_metadata(metadata)
+        except ValueError as e:
+            raise BadRequest(str(e))
+
+        try:
             interface = switch.interfaces[interface_number]
         except KeyError:
             return jsonify("Interface not found"), 404
@@ -453,6 +458,11 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
             interface = switch.interfaces[interface_number]
         except KeyError:
             return jsonify("Interface not found"), 404
+
+        try:
+            self.validate_interface_metadata({key: key})
+        except ValueError as e:
+            raise BadRequest(str(e))
 
         if interface.remove_metadata(key) is False:
             return jsonify("Metadata not found"), 404
@@ -997,3 +1007,16 @@ class Main(KytosNApp):  # pylint: disable=too-many-public-methods
             link.endpoint_a.enable()
             link.endpoint_b.enable()
             self.notify_link_status_change(link, reason='maintenance')
+
+    def validate_interface_metadata(self, metadata):
+        """Validate interface metadata."""
+        intersec = self.reserved_interface_metadata_intersection(metadata)
+        if intersec:
+            raise ValueError(f"The following keys {intersec} are reserved"
+                             " for internal usage")
+
+    def reserved_interface_metadata_intersection(self, metadata):
+        """Compute the given metadata intersection with the reserved keys."""
+        keys = set(metadata.keys())
+        intersection = keys.intersection(self._reserved_intf_metadata)
+        return intersection
